@@ -1,10 +1,20 @@
 /*
  * Arquivo: dashboard.css
- * Tema: Estilização do Dashboard Countbelly
+ * Estilização do Dashboard Countbelly, ou como prefiro o CountBellyDASH
  */
 
+/* 💡 Definição de Cores em Variáveis para facilitar a manutenção */
 .root {
-    -fx-background-color: #f0f2f5; /* Cor de fundo suave */
+    /* Cores de Fundo e Texto */
+    -color-bg-main: #f0f2f5; 
+    -color-bg-card: #ffffff;
+    -color-text-main: #333333;
+    -color-text-secondary: #666666;
+    /* Cores de Marca/Ação */
+    -color-primary: #007bff; /* Azul primário */
+    -color-danger: #dc3545;  /* Vermelho (Atenção/Sair) */
+
+    -fx-background-color: -color-bg-main; 
     -fx-padding: 20px;
 }
 
@@ -12,40 +22,40 @@
 .titulo-principal {
     -fx-font-size: 24px;
     -fx-font-weight: bold;
-    -fx-text-fill: #333333;
+    -fx-text-fill: -color-text-main;
     -fx-padding: 0 0 15px 0;
 }
 
 /* ---------------------------------------------------------------------- */
-/* ESTILOS DE CARDS E MÉTRICAS */
+/* ESTILOS DOS CARDS E MÉTRICAS */
 /* ---------------------------------------------------------------------- */
 
 /* Estilo para os cards de métricas (números grandes) */
 .metric-card {
-    -fx-background-color: #ffffff;
+    -fx-background-color: -color-bg-card;
     -fx-border-radius: 8px;
     -fx-background-radius: 8px;
     -fx-padding: 15px;
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0.5, 0, 1);
-    -fx-min-width: 200px; /* Largura mínima para o card */
+    -fx-min-width: 200px; 
 }
 
 /* Título da métrica (o nome da métrica) */
 .metric-title {
     -fx-font-size: 14px;
-    -fx-text-fill: #666666;
+    -fx-text-fill: -color-text-secondary;
 }
 
 /* Valor da métrica (o número grande) */
 .metric-value {
     -fx-font-size: 32px;
     -fx-font-weight: bold;
-    -fx-text-fill: #007bff; /* Azul primário */
+    -fx-text-fill: -color-primary; 
 }
 
 /* Cor para métricas de atenção (Espera, Humano) */
 .metric-danger {
-    -fx-text-fill: #dc3545; /* Vermelho */
+    -fx-text-fill: -color-danger; 
 }
 
 /* ---------------------------------------------------------------------- */
@@ -55,15 +65,15 @@
 /* Estilo geral para botões de ação */
 .action-button {
     -fx-font-size: 14px;
-    -fx-padding: 8px 15px; /* Padding padrão */
-    -fx-background-color: #ffffff; 
-    -fx-text-fill: #333333;
+    -fx-padding: 8px 15px; 
+    -fx-background-color: -color-bg-card; 
+    -fx-text-fill: -color-text-main;
     -fx-border-color: #cccccc;
     -fx-border-width: 1px;
     -fx-border-radius: 5px;
     -fx-background-radius: 5px;
     -fx-cursor: hand;
-    -fx-min-height: 35px; /* Mantém uma altura consistente */
+    -fx-min-height: 35px; 
 }
 
 .action-button:hover {
@@ -79,7 +89,7 @@
 
 /* Estilo específico para o botão Sair */
 .logout-button {
-    -fx-text-fill: #dc3545; /* Cor vermelha */
+    -fx-text-fill: -color-danger; 
 }
 
 
@@ -89,7 +99,7 @@
 
 /* Estilo para o painel de Reuniões */
 .detail-panel {
-    -fx-background-color: #ffffff;
+    -fx-background-color: -color-bg-card;
     -fx-border-radius: 8px;
     -fx-background-radius: 8px;
     -fx-padding: 15px;
@@ -100,7 +110,7 @@
 .detail-title {
     -fx-font-size: 18px;
     -fx-font-weight: bold;
-    -fx-text-fill: #333333;
+    -fx-text-fill: -color-text-main;
     -fx-padding: 0 0 10px 0;
 }
 
@@ -108,10 +118,22 @@
 .agenda-item {
     -fx-font-size: 14px;
     -fx-text-fill: #555555;
-    -fx-padding: 5px 0;
+    -fx-padding: 5px 10px; 
+    
+    /* CORREÇÃO VISUAL: Garante que o item tenha uma cor de fundo para a borda ser visível em toda a largura. */
+    -fx-background-color: transparent; 
+    
     -fx-border-color: #eeeeee;
-    -fx-border-width: 0 0 1 0;
+    -fx-border-width: 0 0 1 0; /* A borda inferior é o que se estende por toda a largura do Label expandido */
 }
+
+/* 💡 NOVO ESTILO: Para itens que são histórico (reuniões já realizadas) */
+.agenda-item-history {
+    -fx-opacity: 0.6; 
+    -fx-font-style: italic; 
+    -fx-text-fill: #999999;
+}
+
 
 /* Cores personalizadas para o PieChart (se desejado) */
 .chart-pie {
@@ -126,7 +148,7 @@
 
 /* Estilo para a tela de Login */
 .login-panel {
-    -fx-background-color: #ffffff;
+    -fx-background-color: -color-bg-card;
     -fx-border-radius: 12px;
     -fx-background-radius: 12px;
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 20, 0.6, 0, 4);

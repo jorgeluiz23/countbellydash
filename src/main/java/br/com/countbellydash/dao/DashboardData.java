@@ -1,6 +1,6 @@
 package br.com.countbellydash.dao;
 
-// Esta classe conterá todos os dados a serem exibidos no dashboard.
+// contrutores setando os daos que vai estar no dashboard
 public class DashboardData {
 
     private int clientesAtendidosTotal;
@@ -11,7 +11,7 @@ public class DashboardData {
     private int reunioesAgendadas;
     private String statusConexao;
 
-    // Construtor original (mantido para compatibilidade, mas menos usado com DAO)
+    // Construtor original
     public DashboardData(int atendidosTotal, int aguardando, int pf, int pj, int humano, int agendadas, String status) {
         this.clientesAtendidosTotal = atendidosTotal;
         this.clientesAguardando = aguardando;
@@ -22,7 +22,7 @@ public class DashboardData {
         this.statusConexao = status;
     }
 
-    // --- GETTERS (Seus getters originais) ---
+    // --- GETTERSSSSSSSSSSS
     public int getClientesAtendidosTotal() { return clientesAtendidosTotal; }
     public int getClientesAguardando() { return clientesAguardando; }
     public int getClientesPF() { return clientesPF; }
@@ -31,7 +31,7 @@ public class DashboardData {
     public int getReunioesAgendadas() { return reunioesAgendadas; }
     public String getStatusConexao() { return statusConexao; }
 
-    // --- SETTERS (NOVOS: Essenciais para o DAO) ---
+    // --- SETTERS ( Essenciais para o DAO) ---
     public void setClientesAtendidosTotal(int clientesAtendidosTotal) {
         this.clientesAtendidosTotal = clientesAtendidosTotal;
     }

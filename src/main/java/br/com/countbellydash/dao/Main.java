@@ -23,25 +23,22 @@ import java.util.Map;
 import java.util.List;
 import java.util.Comparator;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class Main extends Application {
 
-    // Simulação do Service e Dados (Mantenha seu código real aqui)
     private final DashboardService service = new DashboardService();
     private Stage primaryStage; 
     private BorderPane rootDashboard;
     private double zoomScale = 1.0; 
 
-    // Constantes de Login
     private static final String USERNAME = "admin";
     private static final String PASSWORD = "123123";
     
-    // Constantes de Zoom
     private static final double ZOOM_STEP = 0.1;
     private static final double MAX_ZOOM = 1.5;
     private static final double MIN_ZOOM = 0.8;
     
-    // Formatação da Data/Hora
     private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     @Override
@@ -124,31 +121,30 @@ public class Main extends Application {
      * Método que refaz a busca de dados e reconstrói o conteúdo do dashboard.
      */
     private void refreshDashboardContent() {
-        // 1. Obter todos os dados reais do Supabase.
+        // Puxa todos os dados
         DashboardData data = service.fetchDashboardData();
         List<DashboardService.AgendaItem> fullAgenda = service.fetchAgendaDetails(); 
         
-        // 2. Separa e LIMTA a Agenda
+        // --- 1. Lógica de Filtragem e Ordenação da Agenda ---
         LocalDateTime now = LocalDateTime.now();
         
-        // Limita a 3 próximas (ordenadas da mais próxima para a mais distante)
+        // 1. Próximas Reuniões (Agendada, no futuro, ordenadas da mais próxima p/ a mais distante, máx. 5)
         List<DashboardService.AgendaItem> futureAgenda = fullAgenda.stream()
-            .filter(item -> LocalDateTime.parse(item.dataHora, formatter).isAfter(now))
+            .filter(item -> item.status.equals("Agendada") && LocalDateTime.parse(item.dataHora, formatter).isAfter(now))
             .sorted(Comparator.comparing(item -> LocalDateTime.parse(item.dataHora, formatter))) 
-            .limit(3) 
+            .limit(5) 
             .collect(Collectors.toList());
             
-        // Limita as 3 últimas (ordenadas da mais recente para a mais antiga)
+        // 2. Histórico Recente (O que não é Agendada, ou o que é Agendada e já passou, máx. 5)
         List<DashboardService.AgendaItem> pastAgenda = fullAgenda.stream()
-            .filter(item -> !LocalDateTime.parse(item.dataHora, formatter).isAfter(now)) 
+            .filter(item -> !item.status.equals("Agendada") || (item.status.equals("Agendada") && !LocalDateTime.parse(item.dataHora, formatter).isAfter(now))) 
             .sorted(Comparator.comparing((DashboardService.AgendaItem item) -> LocalDateTime.parse(item.dataHora, formatter)).reversed())
-            .limit(3) 
+            .limit(5) 
             .collect(Collectors.toList());
 
 
-        // 3. HEADER: Título, Status, Refresh, Zoom e Logout (TOP)
+        // --- 2. HEADER: Título e Ações ---
         
-        // Cria os botões de Ação
         Button refreshButton = new Button("🔄 Atualizar Dados");
         refreshButton.getStyleClass().addAll("action-button", "refresh-button");
         refreshButton.setOnAction(e -> refreshDashboardContent()); 
@@ -161,32 +157,32 @@ public class Main extends Application {
         zoomOutButton.getStyleClass().addAll("action-button", "zoom-button");
         zoomOutButton.setOnAction(e -> zoomOut());
 
-        // Botão de Logout
         Button logoutButton = new Button("Sair 🚪");
         logoutButton.getStyleClass().addAll("action-button", "logout-button"); 
         logoutButton.setOnAction(e -> showLoginScreen(primaryStage)); 
         
-        // Controles de Zoom agrupados
         HBox zoomControls = new HBox(10); 
         zoomControls.getChildren().addAll(zoomOutButton, zoomInButton);
-        zoomControls.setAlignment(Pos.CENTER); // Centraliza verticalmente o grupo Zoom
+        zoomControls.setAlignment(Pos.CENTER); 
         
-        // Combina todos os botões de ação em um único HBox
-        HBox actionControlsRight = new HBox(20); // Espaçamento entre os grupos de botões
-        actionControlsRight.setAlignment(Pos.CENTER); // Alinhamento CENTER para centralizar verticalmente todos os botões
+        HBox actionControlsRight = new HBox(20); 
+        actionControlsRight.setAlignment(Pos.CENTER); 
         actionControlsRight.getChildren().addAll(refreshButton, zoomControls, logoutButton); 
 
-        // Título e Status (Esquerda)
         Label titleLabel = createTitleLabel("📊 Dashboard - Countbelly Chatbot");
+        
+        Label statusLabel = createStatusLabel("Status da Fonte: " + data.getStatusConexao());
+        if (data.getStatusConexao().contains("ERRO")) {
+            statusLabel.getStyleClass().add("metric-danger");
+        }
         
         VBox titleAndStatus = new VBox(5);
         titleAndStatus.getChildren().addAll(
             titleLabel,
-            createStatusLabel("Status da Fonte: " + data.getStatusConexao())
+            statusLabel
         );
         titleAndStatus.setAlignment(Pos.CENTER_LEFT); 
 
-        // COMBINAÇÃO NO TOPO: Título (Esquerda) e Ações (Direita)
         HBox topHeader = new HBox(30);
         topHeader.setAlignment(Pos.CENTER_LEFT); 
         
@@ -200,42 +196,25 @@ public class Main extends Application {
         
         rootDashboard.setTop(topHeader);
         
-        // ------------------------------------------------------------------
-        // --- LAYOUT CENTRAL COM ALINHAMENTO CORRIGIDO DA AGENDA ---
-        // ------------------------------------------------------------------
+        // --- 3. LAYOUT CENTRAL (Cards, Gráficos e Agenda) ---
         
-        // CORREÇÃO: Variável deve ser declarada aqui dentro do método
         VBox centralContentVBox = new VBox(25); 
-        VBox.setVgrow(centralContentVBox, Priority.ALWAYS); // Permite o crescimento vertical total
-
-        // 1. LINHA DO TOPO: Cartões de Métrica (60%) + Agenda Futura (40%)
+        VBox.setVgrow(centralContentVBox, Priority.ALWAYS); 
         
-        HBox topRowLayout = new HBox(30);
-        
-        // 1A. Cartões de Métrica
+        // 3A. LINHA DE CARDS DE MÉTRICA (TOPO)
         HBox topMetrics = createTopMetrics(data); 
-        
-        // 1B. Agenda Futura
-        VBox futureAgendaPanel = createAgendaDetailPanel(futureAgenda, "Próximas Reuniões Agendadas");
-        VBox.setVgrow(futureAgendaPanel, Priority.NEVER); 
-        
-        topRowLayout.getChildren().addAll(topMetrics, futureAgendaPanel);
-        
-        HBox.setHgrow(topMetrics, Priority.ALWAYS);
-        HBox.setHgrow(futureAgendaPanel, Priority.ALWAYS);
-        
-        VBox.setVgrow(topRowLayout, Priority.NEVER);
-        centralContentVBox.getChildren().add(topRowLayout);
+        VBox.setVgrow(topMetrics, Priority.NEVER); 
+        centralContentVBox.getChildren().add(topMetrics);
 
 
-        // 2. GRID PRINCIPAL (Gráficos vs Agenda Passada)
+        // 3B. GRID PRINCIPAL: Gráficos (Col. 0) vs Agenda (Col. 1)
         
-        GridPane gridChartsAndAgenda = new GridPane();
-        gridChartsAndAgenda.setHgap(30);
-        gridChartsAndAgenda.setVgap(25);
-        VBox.setVgrow(gridChartsAndAgenda, Priority.ALWAYS); 
+        GridPane mainGrid = new GridPane(); 
+        mainGrid.setHgap(30);
+        mainGrid.setVgap(25);
+        VBox.setVgrow(mainGrid, Priority.ALWAYS); 
         
-        // Restrições de Coluna: 60% (Gráficos) e 40% (Agenda Passada)
+        // Restrições de Coluna: 60% (Gráficos) e 40% (Agenda)
         ColumnConstraints gridCol1 = new ColumnConstraints(); 
         gridCol1.setHgrow(Priority.ALWAYS); 
         gridCol1.setPercentWidth(60); 
@@ -243,43 +222,39 @@ public class Main extends Application {
         ColumnConstraints gridCol2 = new ColumnConstraints(); 
         gridCol2.setHgrow(Priority.ALWAYS);
         gridCol2.setPercentWidth(40); 
-        gridChartsAndAgenda.getColumnConstraints().addAll(gridCol1, gridCol2); 
+        mainGrid.getColumnConstraints().addAll(gridCol1, gridCol2); 
         
-        // Restrição de Linha: Permite o crescimento vertical
         RowConstraints gridRow1 = new RowConstraints();
         gridRow1.setVgrow(Priority.ALWAYS); 
-        gridChartsAndAgenda.getRowConstraints().add(gridRow1);
+        mainGrid.getRowConstraints().add(gridRow1);
 
 
-        // 2a. Painel de Gráficos (Coluna 0: 60%)
+        // PAINEL DE GRÁFICOS (COLUNA 0: 60%)
         VBox chartVBoxStack = new VBox(25);
         VBox.setVgrow(chartVBoxStack, Priority.ALWAYS); 
-        
+
         PieChart pieChart = createSegmentationChart(data.getClientesPF(), data.getClientesPJ());
         BarChart<String, Number> barChart = createDailyVolumeChart(service.fetchDailyMessageVolume());
 
-        pieChart.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
-        barChart.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
-        
         VBox.setVgrow(pieChart, Priority.ALWAYS);
         VBox.setVgrow(barChart, Priority.ALWAYS);
         
         chartVBoxStack.getChildren().addAll(pieChart, barChart);
         GridPane.setValignment(chartVBoxStack, VPos.TOP); 
-        gridChartsAndAgenda.add(chartVBoxStack, 0, 0);
+        mainGrid.add(chartVBoxStack, 0, 0);
 
 
-        // 2b. Painel de Agenda Passada (Coluna 1: 40%)
-        VBox pastAgendaPanel = createAgendaDetailPanel(pastAgenda, "Histórico de Reuniões (Passadas)");
-        VBox.setVgrow(pastAgendaPanel, Priority.ALWAYS); 
-        GridPane.setValignment(pastAgendaPanel, VPos.TOP); 
-        gridChartsAndAgenda.add(pastAgendaPanel, 1, 0);
+        // PAINEL DA AGENDA DIVIDIDO (COLUNA 1: 40%)
+        VBox agendaPanel = createAgendaDetailPanel(futureAgenda, pastAgenda, "📅 Agenda (Próximo e Histórico)");
+        VBox.setVgrow(agendaPanel, Priority.ALWAYS); 
+        GridPane.setValignment(agendaPanel, VPos.TOP); 
+        mainGrid.add(agendaPanel, 1, 0);
 
 
-        // Adiciona o Grid ao VBox Central
-        centralContentVBox.getChildren().add(gridChartsAndAgenda);
+        // Adiciona o Grid Principal ao VBox Central
+        centralContentVBox.getChildren().add(mainGrid);
         
-        // APLICA O ZOOM ao VBox Central
+        // APLICA O ZOOM
         centralContentVBox.setScaleX(zoomScale);
         centralContentVBox.setScaleY(zoomScale);
         
@@ -287,7 +262,7 @@ public class Main extends Application {
         BorderPane.setMargin(centralContentVBox, new Insets(20, 0, 0, 0)); 
     }
     
-    // --- MÉTODOS DE ZOOM (Mantidos) ---
+    // --- MÉTODOS DE ZOOM ---
     
     private void zoomIn() {
         if (zoomScale < MAX_ZOOM) {
@@ -311,7 +286,10 @@ public class Main extends Application {
     
     // --- MÉTODOS AUXILIARES ---
 
-    private VBox createAgendaDetailPanel(List<DashboardService.AgendaItem> agenda, String panelTitle) {
+    private VBox createAgendaDetailPanel(List<DashboardService.AgendaItem> futureAgenda, 
+                                          List<DashboardService.AgendaItem> pastAgenda, 
+                                          String panelTitle) {
+        
         VBox panel = new VBox(10);
         panel.getStyleClass().add("detail-panel");
         
@@ -319,31 +297,94 @@ public class Main extends Application {
         title.getStyleClass().add("detail-title");
         panel.getChildren().add(title);
 
-        if (agenda.isEmpty()) {
-            Label noData = new Label("Nenhuma reunião encontrada.");
-            noData.getStyleClass().add("agenda-item");
-            panel.getChildren().add(noData);
-        } else {
-            // Usa um VBox interno para os itens da agenda, permitindo ScrollPane se necessário em outras versões
-            VBox agendaItemsBox = new VBox(5);
-            for (DashboardService.AgendaItem item : agenda) {
-                Label detail = new Label(
-                    String.format("Cliente: %s (%s)\nData/Hora: %s", 
-                        item.nomeCliente, item.clienteType, item.dataHora)
-                );
-                detail.getStyleClass().add("agenda-item");
-                agendaItemsBox.getChildren().add(detail);
-            }
-            panel.getChildren().add(agendaItemsBox);
-        }
+        GridPane agendaLayoutGrid = new GridPane();
+        agendaLayoutGrid.setVgap(15);
+        GridPane.setVgrow(agendaLayoutGrid, Priority.ALWAYS);
+
+        RowConstraints row50 = new RowConstraints();
+        row50.setVgrow(Priority.ALWAYS);
+        row50.setPercentHeight(50);
+        agendaLayoutGrid.getRowConstraints().addAll(row50, row50);
         
-        // Garante que o painel de agenda se expanda
+        
+        // --- SEÇÃO 1: PRÓXIMAS REUNIÕES (Metade Superior) ---
+        VBox futureSection = createAgendaSection(futureAgenda, "Próximas Reuniões (Futuras):", false);
+        GridPane.setValignment(futureSection, VPos.TOP);
+        agendaLayoutGrid.add(futureSection, 0, 0);
+        
+        // --- SEÇÃO 2: HISTÓRICO RECENTE (Metade Inferior) ---
+        VBox pastSection = createAgendaSection(pastAgenda, "Histórico Recente (Passadas):", true);
+        GridPane.setValignment(pastSection, VPos.TOP);
+        agendaLayoutGrid.add(pastSection, 0, 1);
+        
+        panel.getChildren().add(agendaLayoutGrid);
+        
         panel.setMaxWidth(Double.MAX_VALUE);
         panel.setMaxHeight(Double.MAX_VALUE); 
-        
+        VBox.setVgrow(panel, Priority.ALWAYS); 
+
         return panel;
     }
 
+    /**
+     * MÉTODO CORRIGIDO para garantir que o Label se expanda horizontalmente
+     */
+    private VBox createAgendaSection(List<DashboardService.AgendaItem> agenda, String subTitle, boolean isPastSection) {
+        VBox section = new VBox(5);
+        VBox.setVgrow(section, Priority.ALWAYS); 
+        
+        Label title = new Label(subTitle);
+        title.setStyle("-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;");
+        section.getChildren().add(title);
+        
+        ScrollPane scrollPane = new ScrollPane();
+        scrollPane.setFitToWidth(true); // Faz o conteúdo interno usar a largura total do ScrollPane
+        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scrollPane.setStyle("-fx-background-color: transparent; -fx-border-color: transparent;");
+        
+        VBox agendaItemsBox = new VBox(10);
+        // Garante que o VBox interno use toda a largura
+        agendaItemsBox.setMaxWidth(Double.MAX_VALUE); 
+        agendaItemsBox.setPadding(new Insets(5, 5, 5, 5));
+        
+        if (agenda.isEmpty()) {
+            Label noData = new Label(isPastSection ? "Sem histórico recente." : "Nenhuma reunião futura.");
+            noData.getStyleClass().add("agenda-item");
+            noData.setMaxWidth(Double.MAX_VALUE); 
+            agendaItemsBox.getChildren().add(noData);
+        } else {
+            for (DashboardService.AgendaItem item : agenda) {
+                
+                String statusDisplay = item.status.equals("Agendada") ? "🟢" : "⚫";
+                
+                Label detail = new Label(
+                    String.format("%s %s (%s)\nCliente: %s\nData/Hora: %s", 
+                        statusDisplay,
+                        item.status.toUpperCase(), 
+                        item.clienteType, item.nomeCliente, item.dataHora)
+                );
+                detail.setWrapText(true); 
+                detail.getStyleClass().add("agenda-item");
+                // Garante que o Label de detalhe se estenda por toda a largura
+                detail.setMaxWidth(Double.MAX_VALUE); 
+                
+                if (isPastSection) {
+                    detail.getStyleClass().add("agenda-item-history");
+                }
+                
+                // Adiciona o Label diretamente ao VBox (o setMaxWidth resolve o problema)
+                agendaItemsBox.getChildren().add(detail);
+            }
+        }
+        
+        scrollPane.setContent(agendaItemsBox);
+        section.getChildren().add(scrollPane);
+        VBox.setVgrow(scrollPane, Priority.ALWAYS); 
+        GridPane.setVgrow(section, Priority.ALWAYS); 
+
+        return section;
+    }
+    
     private HBox createTopMetrics(DashboardData data) {
         HBox hbox = new HBox(20);
         hbox.getChildren().addAll(
